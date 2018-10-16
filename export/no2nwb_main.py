@@ -24,7 +24,7 @@ path_to_data = '../RecogMemory_MTL_release_v2/Data'
 
 # Create the NWB file and extract data from the original data format
 NOdata = data.NOData(path_to_data)
-nwbfile = no2nwb.no2nwb(NOdata, 5)
+nwbfile = no2nwb.no2nwb(NOdata, 6)
 
 # Export and write the nwbfile
 session_name = NOdata.sessions[6]['session']
