@@ -1,7 +1,22 @@
 from pynwb import NWBHDF5IO
 import numpy as np
+import math
+import matplotlib.pyplot as plt
 import re
+import os
 
+from scipy.stats import norm
+
+# Programs for reading in data and extract specific
+# portion of the data
+
+
+def get_nwbfile_names(path):
+    filenames = []
+    for file in os.listdir(path):
+        if file.endswith(".nwb"):
+            filenames.append(os.path.join("../data", file))
+    return filenames
 
 def read(file_path):
     """
@@ -42,16 +57,340 @@ def get_event_data(nwbfile):
 
     return events_learn, timestamps_learn, events_recog, timestamps_recog
 
-def calcroc(nwbfile):
+
+def extract_recog_responses(nwbfile):
     """
-    calculate the true positives, true negatives, false positives and false negatives
-    :param nwbfile:
+    Extract the recognition responses
+    :param events_recog:
     :return:
     """
     events_learn, timestamps_learn, events_recog, timestamps_recog = get_event_data(nwbfile)
     response_recog_ind = np.where((events_recog >= 30) & (events_recog <= 36))
     response_recog = events_recog[response_recog_ind] - 30
+    return response_recog
+
+
+def extract_new_old_label(nwbfile):
+    """
+    Extracting the new old ground truths from the nwbfile.
+    :param nwbfile:
+    :return:
+    """
+    labels = np.asarray(nwbfile.trials['new_old_labels_recog'])
+    new_old_labels = np.delete(labels, np.where(labels == 'NA')).astype(int)
+    return new_old_labels
+
+
+def count_response(filenames):
+    """
+    Count the responses
+    :param filenames:
+    :return:
+    """
+    response_1_old = []
+    response_2_old = []
+    response_3_old = []
+    response_4_old = []
+    response_5_old = []
+    response_6_old = []
+
+    response_1_new = []
+    response_2_new = []
+    response_3_new = []
+    response_4_new = []
+    response_5_new = []
+    response_6_new = []
+    for file in filenames:
+        nwb_file = read(file)
+        recog_response = extract_recog_responses(nwb_file)
+        ground_truth = extract_new_old_label(nwb_file)
+        recog_response_old = recog_response[ground_truth == 1]
+
+        response_1_old.append(np.sum(recog_response_old == 1) / len(recog_response_old))
+        response_2_old.append(np.sum(recog_response_old == 2) / len(recog_response_old))
+        response_3_old.append(np.sum(recog_response_old == 3) / len(recog_response_old))
+        response_4_old.append(np.sum(recog_response_old == 4) / len(recog_response_old))
+        response_5_old.append(np.sum(recog_response_old == 5) / len(recog_response_old))
+        response_6_old.append(np.sum(recog_response_old == 6) / len(recog_response_old))
+
+        recog_response_new = recog_response[ground_truth == 0]
+        response_1_new.append(np.sum(recog_response_new == 1) / len(recog_response_new))
+        response_2_new.append(np.sum(recog_response_new == 2) / len(recog_response_new))
+        response_3_new.append(np.sum(recog_response_new == 3) / len(recog_response_new))
+        response_4_new.append(np.sum(recog_response_new == 4) / len(recog_response_new))
+        response_5_new.append(np.sum(recog_response_new == 5) / len(recog_response_new))
+        response_6_new.append(np.sum(recog_response_new == 6) / len(recog_response_new))
+
+    response_old = np.asarray([response_1_old, response_2_old, response_3_old, response_4_old,
+                               response_5_old, response_6_old])
+    response_new = np.asarray([response_1_new, response_2_new, response_3_new, response_4_new,
+                               response_5_new, response_6_new])
+    return response_old, response_new
+
+def extract_probability_response(filenames):
+    """
+    :param nwbfile:
+    :return:
+    """
+    response_old, response_new = count_response(filenames)
+    response_percentage_old = np.mean(response_old, axis=1)
+    std_old = np.std(response_old, axis=1)
+    response_percentage_new = np.mean(response_new, axis=1)
+    std_new = np.std(response_new, axis=1)
+    return response_percentage_old, std_old, response_percentage_new, std_new
+
+
+def cal_d_prime(typecounters, n_old, n_new):
+    """
+    calc D' (d) as well as z-transformed hit rate and false positive rate (zH, zF respectively).
+
+    typeCounters is TP/FN/TN/FP, where positive=OLD
+
+    according to Macmillan&Creelman, Eq 1.1, 1.2, 1.5;
+    error estimation of d' is: Eq 13.4, 13.5
+
+    :param typecounters:
+    :param n_old:
+    :param n_new:
+    :return:
+    """
+    H = 0
+    F = 0
+    if n_old > 0:
+        H = typecounters[0]/n_old
+    if n_new > 0:
+        F = typecounters[3]/n_new
+
+    # % adjust
+    # for perfect(1) and 0(all misses)
+    # % acc
+    # to
+    # pp8
+    H, F = adjustHF(H, F, n_new, n_old)
+
+    zH = norm.ppf(H)
+    zF = norm.ppf(F)
+
+    d = zH - zF
+
+    # % Eq
+    # 13.4, pp325
+
+    phi = lambda p: 1/np.sqrt(2*math.pi)*np.exp(-1/2*np.square(norm.ppf(p)))
+
+    # % Eq
+    # 13.4, pp325
+    Hterm = H * (1 - H) / (n_old * np.square(phi(H)))
+    Fterm = F * (1 - F) / (n_new * np.square(phi(F)))
+
+    stdErr = Hterm + Fterm
+    se = np.sqrt(stdErr)
+
+    return d, zH, zF, H, F, se
+
+
+def adjustHF(H, F, n_new, n_old):
+    """
+    %
+    %adjust hit/false alarm rate for ceiling effects
+    %%according to Macmillan&Creelman, pp8
+    %
+    %urut/nov06
+    function [H,F] = adjustHF(H,F, nOLD, nNEW)
+
+    for i=1:length(H)
+        if H(i)==1
+            H(i) = 1 - 1/(2*nOLD);
+        end
+        if F(i)==1
+            F(i) = 1 - 1/(2*nNEW);
+        end
+        if H(i)==0
+            H(i) = 1/(2*nOLD);
+        end
+        if F(i)==0
+            F(i) = 1/(2*nNEW);
+        end
+
+    end
+    :return:
+    """
+
+    # for i in range(len(H)):
+    #     if H[i] == 1:
+    #         H[i] = 1 - 1/(2*n_old)
+    #     if H[i] == 1:
+    #         F[i] = 1 - 1/(2*n_new)
+    #     if H[i] == 0:
+    #         H[i] = 1/(2*n_old)
+    #     if F[i] == 0:
+    #         F[i] = 1/(2*n_new)
+
+    if H == 1:
+        H = 1 - 1/(2*n_old)
+    if F == 1:
+        F = 1 - 1/(2*n_new)
+    if H == 0:
+        H = 1/(2*n_old)
+    if F == 0:
+        F = 1/(2*n_new)
+
+    return H, F
+
+def cal_cumulative_d(nwbfile):
+    """
+
+    calculate cummulative d' values as well as z-transformed hit/false alarm rates. used to construct empirical ROCs constructed using different
+    confidence ratings.
+
+    the format of C is described in calcEmpiricalROC.m
+
+    statsAll: each column is a confidence level. each row is d', zH, zF, H, F
+
+    urut/oct06
+    :param nwbfile:
+    :return:
+    """
+    typecounter = cal_typecounter(nwbfile)
+    n_old = np.sum(typecounter[0, :])
+    n_new = np.sum(typecounter[3, :])
+
+    stats_all = []
+    for i in range(typecounter.shape[1]):
+        temp = np.sum(typecounter[:, 0:i+1], axis=1)
+        d1, zH1, zF1, H, F, se = cal_d_prime(temp, n_old, n_new);
+        stats_all.append([d1, zH1, zF1, H, F, se])
+
+    # print(n_old)
+    # print(n_new)
+    # print(typecounter)
+    # print(stats_all)
+
+    return np.asarray(stats_all)
+
+
+def cal_typecounter(nwbfile):
+    """
+    calculate the true positives, true negatives, false positives and false negatives
+    :param nwbfile:
+    :return:
+    """
+    response_recog = extract_recog_responses(nwbfile)
 
     labels = np.asarray(nwbfile.trials['new_old_labels_recog'])
     new_old_labels = np.delete(labels, np.where(labels == 'NA')).astype(int)
-    print(new_old_labels)
+
+    typecounter = []
+    # for i in range(6, 0, -1):
+    #     response_recog_accumulated = response_recog[response_recog <= i] >= 3
+    #     new_old_labels_accumulated = new_old_labels[response_recog <= i]
+    #     print(len(response_recog_accumulated))
+    #     #print(np.sum((response_recog_accumulated == 1) & (new_old_labels_accumulated == 1)))
+    #     nTP = np.sum((response_recog_accumulated == 1) & (new_old_labels_accumulated == 1))
+    #     nFN = np.sum((response_recog_accumulated == 0) & (new_old_labels_accumulated == 1))
+    #     nTN = np.sum((response_recog_accumulated == 0) & (new_old_labels_accumulated == 0))
+    #     nFP = np.sum((response_recog_accumulated == 1) & (new_old_labels_accumulated == 0))
+    #     rocs.append([nTP, nFN, nTN, nFP])
+
+    for i in range(6, 0, -1):
+        new_old_labels_selected = new_old_labels[response_recog == i]
+        #print(np.sum((response_recog_accumulated == 1) & (new_old_labels_accumulated == 1)))
+        nTP = np.sum(new_old_labels_selected == 1)
+        nFN = 0
+        nTN = 0
+        nFP = np.sum(new_old_labels_selected == 0)
+        typecounter.append([nTP, nFN, nTN, nFP])
+
+    return np.asarray(typecounter).T
+
+
+def cal_auc(nwbfile):
+    # area under the curve AUC of an ROC
+    # Following eq 3.9, pp 64 of Macmillan book.
+    # partly copied from novelty/ROC/calcAUC.m (thus overlaps)
+    # TP/FP are expected to be ordered (ascending), but are not automatically resorted as this
+    # might introduce artifacts in case of non-monotonic ROCs.
+
+    # if reverseOrder=1, TP and FP are expected in descending order
+    # automatically adds the (0,0) and (1,1) point if it does not exist yet
+    stats_all = cal_cumulative_d(nwbfile)
+    TP = stats_all[:, 3]
+    FP = stats_all[:, 4]
+
+    if (TP[0] != 0) | (FP[0] != 0):
+        TP = np.insert(TP, 0, 0)
+        FP = np.insert(FP, 0, 0)
+
+    if (TP[len(TP)-1] != 1) | (FP[len(FP)-1] != 1):
+        TP = np.insert(TP, len(TP), 1)
+        FP = np.insert(FP, len(FP), 1)
+
+    auc = 0
+    for i in range(1, len(TP)):
+        auc = auc + (FP[i] - FP[i-1]) * TP[i-1]
+        auc = auc + 1/2 * (TP[i]-TP[i-1]) * (FP[i]-FP[i-1])
+
+    return auc
+
+
+def dynamic_split(nwb_file):
+    recog_response = extract_recog_responses(nwb_file)
+    ground_truth = extract_new_old_label(nwb_file)
+    n_response = len(recog_response)
+
+    rep_counts = np.zeros(6)
+    for i in range(1, 7):
+        sum_up = np.sum(recog_response == i)
+        rep_counts[i-1] = sum_up
+
+
+    nr_conf1 = rep_counts[0] + rep_counts[5]
+    nr_conf2 = rep_counts[1] + rep_counts[4]
+    nr_conf3 = rep_counts[2] + rep_counts[3]
+
+    split1 = nr_conf1 - (nr_conf2 + nr_conf3)
+    split2 = (nr_conf1 + nr_conf2) - nr_conf3
+
+    split_status = [split1, split2]
+
+    split_mode = np.amin(np.abs(split_status))
+
+    # If there are no 1 and 6 response, use mode 2 to combine 1,2 and 5,6 for high confidence
+    if (rep_counts[0] == 0) | (rep_counts[5] == 0):
+        split_mode = 2
+    if (rep_counts[1] == 0) | (rep_counts[4] == 0):
+        split_mode = 1
+
+
+    if split_mode == 1:
+        # 1, (2,3), (4,5), 6
+        # TP & FP
+        ind_TP_high = np.where((ground_truth == 1) & (recog_response >= 6))
+        ind_TP_low = np.where((ground_truth == 1) & (recog_response == 4))
+        ind_FP_high = np.where((ground_truth == 0) & (recog_response >= 6))
+        ind_FP_low = np.where((ground_truth == 0) & (recog_response == 4))
+
+        # TN & FN
+        ind_TN_high = np.where((ground_truth == 0) & (recog_response <= 1))
+        ind_TN_low = np.where((ground_truth == 0) & ((recog_response == 3) | (recog_response == 2)))
+        ind_FN_high = np.where((ground_truth == 1) & (recog_response <= 1))
+        ind_FN_low = np.where((ground_truth == 1) & ((recog_response == 3) | (recog_response == 2)))
+
+    else:
+        # (1,2), 3, 4, (5,6)
+        # TP & FP
+        ind_TP_high = np.where((ground_truth == 1) & (recog_response >= 5))
+        ind_TP_low = np.where((ground_truth == 1) & (recog_response == 4))
+        ind_FP_high = np.where((ground_truth == 0) & (recog_response >= 5))
+        ind_FP_low = np.where((ground_truth == 0) & (recog_response == 4))
+
+        # TN & FN
+        ind_TN_high = np.where((ground_truth == 0) & (recog_response <= 2))
+        ind_TN_low = np.where((ground_truth == 0) & ((recog_response == 3) | (recog_response == 2)))
+        ind_FN_high = np.where((ground_truth == 1) & (recog_response <= 2))
+        ind_FN_low = np.where((ground_truth == 1) & ((recog_response == 3) | (recog_response == 2)))
+
+    return split_status, split_mode, ind_TP_high, ind_TP_low, ind_FP_high, ind_FP_low, \
+           ind_TN_high, ind_TN_low, ind_FN_high, ind_FN_low, n_response
+
+
