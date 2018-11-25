@@ -1,0 +1,66 @@
+﻿subject_id,session_id,variant,age,sex,epilepsy_diagnosis
+H09,5,1,55,M,Right Mesial Temporal
+H09,6,2,55,M,Right Mesial Temporal
+H10,7,1,37,M,Left Frontal
+H11,9,1,16,M,Right Lateral Frontal
+H14,17,2,31,M,Bilateral Indep. Temporal
+H14,18,1,31,M,Bilateral Indep. Temporal
+H15,20,1,45,M,Right Mesial Temporal
+H15,21,2,45,M,Right Mesial Temporal
+H16,23,2,34,F,Right Frontal
+H16,24,1,34,F,Right Frontal
+H17,32,1,19,M,Left Inferior Frontal
+H18,26,1,40,M,Right Mesial Temporal
+H19,27,2,34,M,Left Frontal
+H19,28,1,34,M,Left Frontal
+H21,38,2,20,M,Not Localized
+H21,39,1,20,M,Not Localized
+H21,41,3,20,M,Not Localized
+H23,43,3,40,M,Left Mesial Temporal
+H23,44,2,40,M,Left Mesial Temporal
+H23,47,1,40,M,Left Mesial Temporal
+H27,58,2,40,M,Bilateral Indep. Temporal
+H28,48,3,22,M,Right Mesial Temporal
+H29,49,3,17,F,Left Deep Insula
+H31,50,2,30,M,Right Mesial Temporal
+H33,52,1,29,M,Left Mesial Temporal
+H42,54,1,29,M,Not Localized
+H42,55,1,29,M,Not Localized
+H43,56,1,27,F,Left Mesial Temporal
+H44,68,1,57,F,Right Mesial Temporal
+H47,92,1,20,M,Right Mesial Temporal
+H47,97,3,20,M,Right Mesial Temporal
+H48,98,2,54,M,Left Mesial Temporal
+H48,99,1,54,M,Left Mesial Temporal
+H51,104,3,24,M,Bilateral Frontal and Temporal
+H51,105,1,24,M,Bilateral Frontal and Temporal
+C24,59,1,47,F,Not Localized
+C24,60,2,47,F,Not Localized
+C25,61,1,36,F,Bilateral Indep. Mesial Temporal
+C25,63,2,36,F,Bilateral Indep. Mesial Temporal
+C26,64,1,56,F,Left Mesial Temporal
+C26,66,2,56,F,Left Mesial Temporal
+C27,67,1,44,M,Left Mesial Temporal
+C29,69,1,19,M,Left Neocortical Temporal
+C29,70,2,19,M,Left Neocortical Temporal
+C31,73,3,32,M,Left Neocortical Temporal
+C32,74,2,19,M,Not Localized (Generalized)
+C33,76,3,44,F,Right Mesial Temporal
+C33,77,2,44,F,Right Mesial Temporal
+C33,78,1,44,F,Right Mesial Temporal
+C34,85,3,70,M,Bilateral Mesial Temporal
+C37,96,3,33,F,Right Mesial Temporal
+C38,102,3,63,F,Right Mesial Temporal
+C39,93,1,26,M,Right Insula
+C39,100,3,26,M,Right Insula
+C40,101,3,25,M,Right Motor Cortex
+C42,111,1,25,F,Not Localized
+C42,112,2,25,F,Not Localized
+C43,113,3,42,F,Left Mesial Temporal
+C44,114,3,53,F,Right Mesial Temporal
+C47,115,3,32,M,Right Mesial Temporal
+C48,116,3,32,F,Left Mesial Temporal
+C49,117,3,24,F,Left Mesial Temporal
+C49,118,1,24,F,Left Mesial Temporal
+C51,119,3,17,M,Not Localized (No Seizures)
+C51,120,1,17,M,Not Localized (No Seizures)

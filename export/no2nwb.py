@@ -5,11 +5,12 @@ import os
 from pynwb import NWBFile, NWBHDF5IO, TimeSeries, ProcessingModule
 from pynwb.image import ImageSeries
 from pynwb.ecephys import Clustering, ClusterWaveforms, FeatureExtraction
+from pynwb.file import Subject
 from pynwb.device import Device
 import datetime
 import cv2
 
-def no2nwb(NOData, session_use):
+def no2nwb(NOData, session_use, subjects):
 
     # Prepare the NO data that will be coverted to the NWB format
 
@@ -18,6 +19,20 @@ def no2nwb(NOData, session_use):
     cell_ids = NOData.ls_cells(session_use)
     experiment_id_learn = session['experiment_id_learn']
     experiment_id_recog = session['experiment_id_recog']
+    task_descr = session['task_descr']
+
+    # Get the metadata for the subject
+    df_session = subjects[subjects['session_id'] == session_use]
+
+    print('session_use')
+    print(session_use)
+    print('age')
+    print(str(df_session['age'].values[0]))
+    print('epilepsy_diagnosis')
+    print(str(df_session['epilepsy_diagnosis'].values[0]))
+
+    nwb_subject = Subject(age=str(df_session['age'].values[0]), description=df_session['epilepsy_diagnosis'].values[0],
+                          sex=df_session['sex'].values[0], subject_id=df_session['subject_id'].values[0], source='NA')
 
     # Create the NWB file
     nwbfile = NWBFile(
@@ -28,7 +43,8 @@ def no2nwb(NOData, session_use):
         file_create_date=datetime.datetime.now(),
         experiment_description="learning: " + str(experiment_id_learn) + ", " + \
                                "recognition: " + \
-                               str(experiment_id_recog)
+                               str(experiment_id_recog),
+        subject=nwb_subject
     )
 
 
@@ -68,7 +84,10 @@ def no2nwb(NOData, session_use):
     # Add stimuli learn
     counter = 1
     for path in stimuli_learn_path:
+        if path == 'NA':
+            continue
         folders = path.split('\\')
+
         path = os.path.join('./RecogMemory_MTL_release_v2', 'Stimuli', folders[0], folders[1], folders[2])
         img = cv2.imread(path)
 
@@ -121,8 +140,13 @@ def no2nwb(NOData, session_use):
     nwbfile.add_trial_column('external_image_file', 'the file path to the stimulus')
     nwbfile.add_trial_column('new_old_labels_recog', 'labels for new or old stimulus')
 
+    range_recog = np.amin([len(events_recog_stim_on), len(events_recog_stim_off), len(events_recog_delay1_off),
+                           len(events_recog_delay2_off)])
+    range_learn = np.amin([len(events_learn_stim_on), len(events_learn_stim_off), len(events_learn_delay1_off),
+                           len(events_learn_delay2_off)])
+
     # Iterate the event list and add information into each epoch and trial table
-    for i in range(events_learn_stim_on.shape[0]):
+    for i in range(range_learn):
         nwbfile.create_epoch(start_time=events_learn_stim_on.iloc[i][0],
                              stop_time=events_learn_stim_off.iloc[i][0],
                              timeseries=[event_ts, experiment_ids],
@@ -141,7 +165,7 @@ def no2nwb(NOData, session_use):
                            'external_image_file': stimuli_learn_path[i],
                            'new_old_labels_recog': 'NA'})
 
-    for i in range(events_learn_stim_on.shape[0]):
+    for i in range(range_recog):
         nwbfile.create_epoch(start_time=events_recog_stim_on.iloc[i][0],
                              stop_time=events_recog_stim_off.iloc[i][0],
                              timeseries=[event_ts, experiment_ids],
@@ -182,8 +206,12 @@ def no2nwb(NOData, session_use):
     for channel_id in channel_ids:
         cell_name = 'A' + str(channel_id) + '_cells.mat'
         file_path = os.path.join('RecogMemory_MTL_release_v2', 'Data', 'sorted', session['session'],
-                                 'NO', cell_name)
-        cell_mat = loadmat(file_path)
+                                 task_descr, cell_name)
+        try:
+            cell_mat = loadmat(file_path)
+        except FileNotFoundError:
+            print("File not found")
+            continue
         spikes = cell_mat['spikes']
         meanWaveform_recog = cell_mat['meanWaveform_recog']
         meanWaveform_learn = cell_mat['meanWaveform_learn']
@@ -204,7 +232,11 @@ def no2nwb(NOData, session_use):
                                                    waveform_sd=np.asarray([[0]]),
                                                    waveform_mean=np.asarray([meanWaveform_learn[0][0][1][i]]),
                                                    name='waveform_learn_cluster_id_'+str(meanWaveform_learn[0][0][0][0][i]))
-            clusterWaveform_learn_processing_module.add_data_interface(waveform_mean_learn)
+            try:
+                clusterWaveform_learn_processing_module.add_data_interface(waveform_mean_learn)
+            except ValueError as e:
+                print('Catch an error in adding waveform interface to the recog processing module:' + str(e))
+                continue
 
         # Adding mean waveform recognition into the processing module
         for i in range(len(meanWaveform_recog[0][0][0][0])):
@@ -214,7 +246,11 @@ def no2nwb(NOData, session_use):
                                                    waveform_sd=np.asarray([[0]]),
                                                    waveform_mean=np.asarray([meanWaveform_recog[0][0][1][i]]),
                                                    name='waveform_recog_cluster_id_'+str(meanWaveform_recog[0][0][0][0][i]))
-            clusterWaveform_recog_processing_module.add_data_interface(waveform_mean_recog)
+            try:
+                clusterWaveform_recog_processing_module.add_data_interface(waveform_mean_recog)
+            except ValueError as e:
+                print('Catch an error in adding waveform interface to the recog processing module:' + str(e))
+                continue
 
         # Adding IsolDist_SNR data into the processing module
         # Here I use feature extraction to store the IsolDist_SNR data because
@@ -226,7 +262,11 @@ def no2nwb(NOData, session_use):
                                                  unit='NA',
                                                  timestamps=[0],
                                                  name='IsolDist_' + str(IsolDist_SNR[0][0][0][0][i]))
-            IsolDist_processing_module.add_data_interface(isoldist_data_interface)
+            try:
+                IsolDist_processing_module.add_data_interface(isoldist_data_interface)
+            except ValueError as e:
+                print('Catch an error in adding IsolDist to the processing module:' + str(e))
+                continue
 
             SNR_data_interface = TimeSeries(source='NA',
                                             unit='NA',
@@ -234,7 +274,12 @@ def no2nwb(NOData, session_use):
                                             data=[IsolDist_SNR[0][0][2][0][i]],
                                             timestamps=[0],
                                             name='SNR_' + str(IsolDist_SNR[0][0][0][0][i]))
-            SNR_processing_module.add_data_interface(SNR_data_interface)
+
+            try:
+                SNR_processing_module.add_data_interface(SNR_data_interface)
+            except ValueError as e:
+                print('Catch an error in adding SNR to the processing module:' + str(e))
+                continue
 
     nwbfile.add_processing_module(clustering_processing_module)
     nwbfile.add_processing_module(clusterWaveform_learn_processing_module)

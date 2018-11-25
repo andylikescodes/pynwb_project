@@ -4,25 +4,23 @@ import math
 import matplotlib.pyplot as plt
 import re
 import os
-
 from scipy.stats import norm
-
-# Programs for reading in data and extract specific
-# portion of the data
 
 
 def get_nwbfile_names(path):
+    """
+    Get all nwb file paths in the folder
+    """
     filenames = []
     for file in os.listdir(path):
         if file.endswith(".nwb"):
             filenames.append(os.path.join("../data", file))
     return filenames
 
+
 def read(file_path):
     """
     read in files
-    :param file_path:
-    :return:
     """
     io = NWBHDF5IO(file_path)
     nwbfile = io.read()
@@ -32,8 +30,6 @@ def read(file_path):
 def get_event_data(nwbfile):
     """
     Get event data from the nwbfile
-    :param nwbfile:
-    :return:
     """
     events = nwbfile.get_acquisition('events')
     experiment_id_list = np.asarray(nwbfile.get_acquisition('experiment_ids').data)
@@ -61,8 +57,6 @@ def get_event_data(nwbfile):
 def extract_recog_responses(nwbfile):
     """
     Extract the recognition responses
-    :param events_recog:
-    :return:
     """
     events_learn, timestamps_learn, events_recog, timestamps_recog = get_event_data(nwbfile)
     response_recog_ind = np.where((events_recog >= 30) & (events_recog <= 36))
@@ -73,8 +67,6 @@ def extract_recog_responses(nwbfile):
 def extract_new_old_label(nwbfile):
     """
     Extracting the new old ground truths from the nwbfile.
-    :param nwbfile:
-    :return:
     """
     labels = np.asarray(nwbfile.trials['new_old_labels_recog'])
     new_old_labels = np.delete(labels, np.where(labels == 'NA')).astype(int)
@@ -84,8 +76,6 @@ def extract_new_old_label(nwbfile):
 def count_response(filenames):
     """
     Count the responses
-    :param filenames:
-    :return:
     """
     response_1_old = []
     response_2_old = []
@@ -149,10 +139,6 @@ def cal_d_prime(typecounters, n_old, n_new):
     according to Macmillan&Creelman, Eq 1.1, 1.2, 1.5;
     error estimation of d' is: Eq 13.4, 13.5
 
-    :param typecounters:
-    :param n_old:
-    :param n_new:
-    :return:
     """
     H = 0
     F = 0
@@ -191,40 +177,10 @@ def cal_d_prime(typecounters, n_old, n_new):
 
 def adjustHF(H, F, n_new, n_old):
     """
-    %
-    %adjust hit/false alarm rate for ceiling effects
-    %%according to Macmillan&Creelman, pp8
-    %
-    %urut/nov06
-    function [H,F] = adjustHF(H,F, nOLD, nNEW)
-
-    for i=1:length(H)
-        if H(i)==1
-            H(i) = 1 - 1/(2*nOLD);
-        end
-        if F(i)==1
-            F(i) = 1 - 1/(2*nNEW);
-        end
-        if H(i)==0
-            H(i) = 1/(2*nOLD);
-        end
-        if F(i)==0
-            F(i) = 1/(2*nNEW);
-        end
-
-    end
-    :return:
+    adjust hit/false alarm rate for ceiling effects
+    according to Macmillan&Creelman, pp8
+    urut/nov06
     """
-
-    # for i in range(len(H)):
-    #     if H[i] == 1:
-    #         H[i] = 1 - 1/(2*n_old)
-    #     if H[i] == 1:
-    #         F[i] = 1 - 1/(2*n_new)
-    #     if H[i] == 0:
-    #         H[i] = 1/(2*n_old)
-    #     if F[i] == 0:
-    #         F[i] = 1/(2*n_new)
 
     if H == 1:
         H = 1 - 1/(2*n_old)
@@ -239,7 +195,6 @@ def adjustHF(H, F, n_new, n_old):
 
 def cal_cumulative_d(nwbfile):
     """
-
     calculate cummulative d' values as well as z-transformed hit/false alarm rates. used to construct empirical ROCs constructed using different
     confidence ratings.
 
@@ -248,8 +203,6 @@ def cal_cumulative_d(nwbfile):
     statsAll: each column is a confidence level. each row is d', zH, zF, H, F
 
     urut/oct06
-    :param nwbfile:
-    :return:
     """
     typecounter = cal_typecounter(nwbfile)
     n_old = np.sum(typecounter[0, :])
@@ -261,19 +214,12 @@ def cal_cumulative_d(nwbfile):
         d1, zH1, zF1, H, F, se = cal_d_prime(temp, n_old, n_new);
         stats_all.append([d1, zH1, zF1, H, F, se])
 
-    # print(n_old)
-    # print(n_new)
-    # print(typecounter)
-    # print(stats_all)
-
     return np.asarray(stats_all)
 
 
 def cal_typecounter(nwbfile):
     """
     calculate the true positives, true negatives, false positives and false negatives
-    :param nwbfile:
-    :return:
     """
     response_recog = extract_recog_responses(nwbfile)
 
@@ -281,16 +227,6 @@ def cal_typecounter(nwbfile):
     new_old_labels = np.delete(labels, np.where(labels == 'NA')).astype(int)
 
     typecounter = []
-    # for i in range(6, 0, -1):
-    #     response_recog_accumulated = response_recog[response_recog <= i] >= 3
-    #     new_old_labels_accumulated = new_old_labels[response_recog <= i]
-    #     print(len(response_recog_accumulated))
-    #     #print(np.sum((response_recog_accumulated == 1) & (new_old_labels_accumulated == 1)))
-    #     nTP = np.sum((response_recog_accumulated == 1) & (new_old_labels_accumulated == 1))
-    #     nFN = np.sum((response_recog_accumulated == 0) & (new_old_labels_accumulated == 1))
-    #     nTN = np.sum((response_recog_accumulated == 0) & (new_old_labels_accumulated == 0))
-    #     nFP = np.sum((response_recog_accumulated == 1) & (new_old_labels_accumulated == 0))
-    #     rocs.append([nTP, nFN, nTN, nFP])
 
     for i in range(6, 0, -1):
         new_old_labels_selected = new_old_labels[response_recog == i]
@@ -304,16 +240,17 @@ def cal_typecounter(nwbfile):
     return np.asarray(typecounter).T
 
 
-def cal_auc(nwbfile):
-    # area under the curve AUC of an ROC
-    # Following eq 3.9, pp 64 of Macmillan book.
-    # partly copied from novelty/ROC/calcAUC.m (thus overlaps)
-    # TP/FP are expected to be ordered (ascending), but are not automatically resorted as this
-    # might introduce artifacts in case of non-monotonic ROCs.
+def cal_auc(stats_all):
+    """
+    area under the curve AUC of an ROC
+    Following eq 3.9, pp 64 of Macmillan book.
+    partly copied from novelty/ROC/calcAUC.m (thus overlaps)
+    TP/FP are expected to be ordered (ascending), but are not automatically resorted as this
+    might introduce artifacts in case of non-monotonic ROCs.
 
-    # if reverseOrder=1, TP and FP are expected in descending order
-    # automatically adds the (0,0) and (1,1) point if it does not exist yet
-    stats_all = cal_cumulative_d(nwbfile)
+    if reverseOrder=1, TP and FP are expected in descending order
+    automatically adds the (0,0) and (1,1) point if it does not exist yet
+    """
     TP = stats_all[:, 3]
     FP = stats_all[:, 4]
 
@@ -333,9 +270,10 @@ def cal_auc(nwbfile):
     return auc
 
 
-def dynamic_split(nwb_file):
-    recog_response = extract_recog_responses(nwb_file)
-    ground_truth = extract_new_old_label(nwb_file)
+def dynamic_split(recog_response, ground_truth):
+    """
+    Split low/high confidence dynamically
+    """
     n_response = len(recog_response)
 
     rep_counts = np.zeros(6)
@@ -353,14 +291,13 @@ def dynamic_split(nwb_file):
 
     split_status = [split1, split2]
 
-    split_mode = np.amin(np.abs(split_status))
+    split_mode = np.where(np.abs(split_status) == np.min(np.abs(split_status)))[0][0]+1
 
     # If there are no 1 and 6 response, use mode 2 to combine 1,2 and 5,6 for high confidence
     if (rep_counts[0] == 0) | (rep_counts[5] == 0):
         split_mode = 2
     if (rep_counts[1] == 0) | (rep_counts[4] == 0):
         split_mode = 1
-
 
     if split_mode == 1:
         # 1, (2,3), (4,5), 6
@@ -386,11 +323,76 @@ def dynamic_split(nwb_file):
 
         # TN & FN
         ind_TN_high = np.where((ground_truth == 0) & (recog_response <= 2))
-        ind_TN_low = np.where((ground_truth == 0) & ((recog_response == 3) | (recog_response == 2)))
+        ind_TN_low = np.where((ground_truth == 0) & (recog_response == 3))
         ind_FN_high = np.where((ground_truth == 1) & (recog_response <= 2))
-        ind_FN_low = np.where((ground_truth == 1) & ((recog_response == 3) | (recog_response == 2)))
+        ind_FN_low = np.where((ground_truth == 1) & (recog_response == 3))
 
     return split_status, split_mode, ind_TP_high, ind_TP_low, ind_FP_high, ind_FP_low, \
            ind_TN_high, ind_TN_low, ind_FN_high, ind_FN_low, n_response
 
+
+def correct_incorrect_indexes(recog_response, ground_truth):
+    """
+    Get the indexes for correct and incorrect responses
+    """
+    correct_ind = np.where(((recog_response <= 3) & (ground_truth == 0)) | ((recog_response >=4) & (ground_truth == 1)))
+    incorrect_ind = np.where(((recog_response <= 3) & (ground_truth == 1)) |
+                             ((recog_response >= 4) & (ground_truth == 0)))
+
+    return correct_ind[0], incorrect_ind[0]
+
+
+def remap_response(recog_response):
+    """
+    remap the responses to high (1), median (2), and low (3) level
+    """
+    recog_response[recog_response == 6] = 1
+    recog_response[recog_response == 5] = 2
+    recog_response[recog_response == 4] = 3
+
+    return recog_response
+
+
+def check_inclusion(recog_response, auc):
+    """
+    Check whether to include the session or not for confidence vs correctness
+    """
+    resp_count = []
+    is_included = 1
+
+    if auc < 0.6:
+        is_included = 0
+
+    for i in range(1, 7):
+        resp_count.append(np.sum(recog_response == i))
+
+    resp_count = np.asarray(resp_count)
+
+    if (np.sum(resp_count[0:3] == 0) > 1) | (np.sum(resp_count[3:6] == 0) > 1):
+        is_included = 0
+
+    return is_included
+
+
+def extract_response_from_nwbfile(nwbfile):
+    """
+    Extract recognition/learning responses from the nwbfile
+    """
+    experiment_description = nwbfile.experiment_description
+    experiment_ids = re.findall(r'\d+', experiment_description)
+    experiment_id_recog = int(experiment_ids[1])
+    experiment_id_learn = int(experiment_ids[0])
+
+    print(experiment_id_recog)
+    print(experiment_id_learn)
+
+    events = np.asarray(nwbfile.get_acquisition('events').data)
+    experiments = np.asarray(nwbfile.get_acquisition('experiment_ids').data)
+    print(events)
+    print(experiments)
+    events_recog = events[((experiments == experiment_id_recog) & ((events >= 30) & (events <= 36)))] - 30
+    events_learn = events[((experiments == experiment_id_learn) & ((events >= 20) & (events <= 21)))] - 20
+    print(len(events_recog))
+    print(len(events_learn))
+    return events_recog, events_learn
 

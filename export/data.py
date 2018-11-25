@@ -192,26 +192,31 @@ class NOData:
             response_recog = recog_responses[i]
 
             # Processing the learning phase
+            if len(learn_events_time_points['stimulus_on']) > i:
+                trial_start = learn_events_time_points['stimulus_on'][i] - baseline_offset
+                trial_end = learn_events_time_points['trial_end'][i]
+                trial_duration = trial_end - trial_start
 
-            trial_start = learn_events_time_points['stimulus_on'][i] - baseline_offset
-            trial_end = learn_events_time_points['trial_end'][i]
-            trial_duration = trial_end - trial_start
+                trial_timestamps_learn = raw_spike_timestamps[(raw_spike_timestamps > trial_start) *
+                                         (raw_spike_timestamps <= trial_end)] - trial_start
+                stimuli_learn_id = stimuli_learn_list[0][i]
+                file_path_learn = file_mapping[0][stimuli_learn_id - 1][0].replace('C:\code\images\\', '')
 
-            trial_timestamps_learn = raw_spike_timestamps[(raw_spike_timestamps > trial_start) *
-                                     (raw_spike_timestamps <= trial_end)] - trial_start
-            stimuli_learn_id = stimuli_learn_list[0][i]
-            file_path_learn = file_mapping[0][stimuli_learn_id - 1][0].replace('C:\code\images\\', '')
+                category_learn = category_mapping.loc[stimuli_learn_id, 1]
 
-
-            category_learn = category_mapping.loc[stimuli_learn_id, 1]
-
-            category_name_learn = category_names[0, category_learn - 1][0]
-            response_learn = learn_responses[i]
+                category_name_learn = category_names[0, category_learn - 1][0]
+                response_learn = learn_responses[i]
+            else:
+                category_learn = 'NA'
+                category_name_learn = 'NA'
+                response_learn = 'NA'
+                file_path_learn = 'NA'
+                trial_timestamps_learn = 'NA'
 
             # Creating this trial object
             trial = Trial(category_recog, category_name_recog, new_old_recog, response_recog, category_learn,
-                          category_name_learn, response_learn, file_path_recog, file_path_learn, stimuli_recog_id, trial_timestamps_recog,
-                          trial_timestamps_learn)
+                          category_name_learn, response_learn, file_path_recog, file_path_learn, stimuli_recog_id,
+                          trial_timestamps_recog, trial_timestamps_learn)
             trials.append(trial)
 
         return trials
