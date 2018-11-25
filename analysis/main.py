@@ -5,7 +5,7 @@ import logging
 logging.basicConfig(filename='errorfiles.log')
 
 # Plot the behavioral graphs
-#plot_behavioral_graphs()
+plot_behavioral_graphs()
 
 # Plot the single neuron analysis
 # Find all filenames in the data directory
