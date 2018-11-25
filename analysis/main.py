@@ -26,14 +26,14 @@ for filename in filenames:
         print("Somehow catch this index error: " + str(e))
         logging.warning('Error in extracting events, filename: '+ filename)
         continue
-    neurons = neurons + extract_neuron_data_from_nwb(nwbfile)
+    neurons = neurons + temp
 
 
 # Find visually selective (VS) neurons and memory selective (MS) neurons
 vs_neurons = []
 ms_neurons = []
 for neuron in neurons:
-    print('Processing..: ' + neuron.session_id)
+    print('Processing..: ' + neuron.session_id + ' ' + neuron.channel_id + ' ' + str(neuron.neuron_id))
     if neuron.vs_test() < 0.05:
         vs_neurons.append(neuron)
     if neuron.ms_test(10000) < 0.05:

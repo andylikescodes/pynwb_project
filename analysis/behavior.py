@@ -57,7 +57,11 @@ def plot_behavioral_graphs():
             nwbfile = read(filename)
         except ValueError as e:
             print('Problem opening the file: ' + str(e))
-            logging.warning('Error File: ' + filename)
+            logging.warning('Error File: ' + filename + ':' + str(e))
+            continue
+        except OSError as e:
+            print('Problem opening the file:' + str(e))
+            logging.warning('Error File ' + filename + ':' + str(e))
             continue
 
         recog_response = extract_recog_responses(nwbfile)
