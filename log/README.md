@@ -1,0 +1,1 @@
+A log folder to log error messages.
