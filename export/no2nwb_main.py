@@ -31,7 +31,7 @@ NOdata = data.NOData(path_to_data)
 for session_nr in NOdata.sessions.keys():
     nwbfile = no2nwb.no2nwb(NOdata, session_nr, subjects)
 
-# # Export and write the nwbfile
+    # Export and write the nwbfile
     session_name = NOdata.sessions[session_nr]['session']
 
     io = NWBHDF5IO('data/' + '/' + session_name + '_' + str(session_nr) + '.nwb', mode='w')
