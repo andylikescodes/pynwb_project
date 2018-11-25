@@ -53,6 +53,7 @@ def plot_behavioral_graphs():
 
     for filename in filenames:
         try:
+            print('processing file: ' + filename)
             nwbfile = read(filename)
         except ValueError as e:
             print('Problem opening the file: ' + str(e))

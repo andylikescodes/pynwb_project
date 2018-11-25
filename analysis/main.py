@@ -33,6 +33,7 @@ for filename in filenames:
 vs_neurons = []
 ms_neurons = []
 for neuron in neurons:
+    print('Processing..: ' + neuron.session_id)
     if neuron.vs_test() < 0.05:
         vs_neurons.append(neuron)
     if neuron.ms_test(10000) < 0.05:

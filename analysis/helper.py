@@ -383,16 +383,11 @@ def extract_response_from_nwbfile(nwbfile):
     experiment_id_recog = int(experiment_ids[1])
     experiment_id_learn = int(experiment_ids[0])
 
-    print(experiment_id_recog)
-    print(experiment_id_learn)
-
     events = np.asarray(nwbfile.get_acquisition('events').data)
     experiments = np.asarray(nwbfile.get_acquisition('experiment_ids').data)
-    print(events)
-    print(experiments)
+
     events_recog = events[((experiments == experiment_id_recog) & ((events >= 30) & (events <= 36)))] - 30
     events_learn = events[((experiments == experiment_id_learn) & ((events >= 20) & (events <= 21)))] - 20
-    print(len(events_recog))
-    print(len(events_learn))
+
     return events_recog, events_learn
 

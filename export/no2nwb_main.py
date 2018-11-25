@@ -7,20 +7,22 @@ from pynwb import NWBHDF5IO
 
 
 # Download the NO dataset from the website
-if not os.path.exists('../RecogMemory_MTL_release_v2'):
-    os.path.isfile('../RecogMemory_MTL_release_v2.zip')
+print(os.path.exists('./RecogMemory_MTL_release_v2'))
+if not os.path.exists('./RecogMemory_MTL_release_v2'):
+    print(1)
+    os.path.isfile('./RecogMemory_MTL_release_v2.zip')
 
     urllib.request.urlretrieve('https://datadryad.org/bitstream/handle/10255/dryad.163179/RecogMemory_MTL_release_v2.zip', \
                                'RecogMemory_MTL_release_v2.zip')
 
-    zip_ref = zipfile.ZipFile('../RecogMemory_MTL_release_v2.zip', 'r')
-    zip_ref.extractall('../RecogMemory_MTL_release_v2')
+    zip_ref = zipfile.ZipFile('./RecogMemory_MTL_release_v2.zip', 'r')
+    zip_ref.extractall('./RecogMemory_MTL_release_v2')
     zip_ref.close()
 
-    os.remove('../RecogMemory_MTL_release_v2.zip')
+    os.remove('./RecogMemory_MTL_release_v2.zip')
 
 # Set data path
-path_to_data = '../RecogMemory_MTL_release_v2/Data'
+path_to_data = './RecogMemory_MTL_release_v2/Data'
 
 # Read in subject data
 subjects = pd.read_csv('export/subjects.csv')
