@@ -32,11 +32,11 @@ def no2nwb(NOData, session_use, subjects):
     print(str(df_session['epilepsy_diagnosis'].values[0]))
 
     nwb_subject = Subject(age=str(df_session['age'].values[0]), description=df_session['epilepsy_diagnosis'].values[0],
-                          sex=df_session['sex'].values[0], subject_id=df_session['subject_id'].values[0], source='NA')
+                          sex=df_session['sex'].values[0], subject_id=df_session['subject_id'].values[0])
 
     # Create the NWB file
     nwbfile = NWBFile(
-        source='https://datadryad.org/bitstream/handle/10255/dryad.163179/RecogMemory_MTL_release_v2.zip',
+        #source='https://datadryad.org/bitstream/handle/10255/dryad.163179/RecogMemory_MTL_release_v2.zip',
         session_description='RecogMemory dataset session use 5' + session['session'],
         identifier=session['session_id'],
         session_start_time=datetime.datetime.now(),# TODO: need to check out the time for session start
@@ -49,9 +49,14 @@ def no2nwb(NOData, session_use, subjects):
 
 
     # Add event and experiment_id acquisition
-    event_ts = TimeSeries(name='events', source='NA', unit='NA', data=np.asarray(events[1].values),
+    # event_ts = TimeSeries(name='events', source='NA', unit='NA', data=np.asarray(events[1].values),
+    #                       timestamps=np.asarray(events[0].values))
+
+    event_ts = TimeSeries(name='events', unit='NA', data=np.asarray(events[1].values),
                           timestamps=np.asarray(events[0].values))
-    experiment_ids = TimeSeries(name='experiment_ids', source='NA', unit='NA', data=np.asarray(events[2]),
+    # experiment_ids = TimeSeries(name='experiment_ids', source='NA', unit='NA', data=np.asarray(events[2]),
+    #                             timestamps=np.asarray(events[0].values))
+    experiment_ids = TimeSeries(name='experiment_ids', unit='NA', data=np.asarray(events[2]),
                                 timestamps=np.asarray(events[0].values))
     nwbfile.add_acquisition(event_ts)
     nwbfile.add_acquisition(experiment_ids)
@@ -72,7 +77,6 @@ def no2nwb(NOData, session_use, subjects):
         name = 'stimuli_recog_' + str(counter)
         stimulus_recog = ImageSeries(
             name=name,
-            source='NA',
             data=img,
             unit='NA',
             format='',
@@ -95,7 +99,6 @@ def no2nwb(NOData, session_use, subjects):
 
         stimulus_learn = ImageSeries(
             name=name,
-            source='NA',
             data=img,
             unit='NA',
             format='',
@@ -147,57 +150,66 @@ def no2nwb(NOData, session_use, subjects):
 
     # Iterate the event list and add information into each epoch and trial table
     for i in range(range_learn):
-        nwbfile.create_epoch(start_time=events_learn_stim_on.iloc[i][0],
-                             stop_time=events_learn_stim_off.iloc[i][0],
-                             timeseries=[event_ts, experiment_ids],
-                             tags='stimulus_learn',
-                             description='learning phase stimulus')
+        # nwbfile.create_epoch(start_time=events_learn_stim_on.iloc[i][0],
+        #                      stop_time=events_learn_stim_off.iloc[i][0],
+        #                      timeseries=[event_ts, experiment_ids],
+        #                      tags='stimulus_learn',
+        #                      description='learning phase stimulus')
 
-        nwbfile.add_trial({'start': events_learn_stim_on.iloc[i][0],
-                           'end': events_learn_delay2_off.iloc[i][0],
-                           'stim_on': events_learn_stim_on.iloc[i][0],
-                           'stim_off': events_learn_stim_off.iloc[i][0],
-                           'delay1_off': events_learn_delay1_off.iloc[i][0],
-                           'delay2_off': events_learn_delay2_off.iloc[i][0],
-                           'stim_phase': 'learn',
-                           'category_id': cat_id_learn[i],
-                           'category_name': cat_name_learn[i],
-                           'external_image_file': stimuli_learn_path[i],
-                           'new_old_labels_recog': 'NA'})
+        # nwbfile.add_trial({'start': events_learn_stim_on.iloc[i][0],
+        #                    'end': events_learn_delay2_off.iloc[i][0],
+        #                    'stim_on': events_learn_stim_on.iloc[i][0],
+        #                    'stim_off': events_learn_stim_off.iloc[i][0],
+        #                    'delay1_off': events_learn_delay1_off.iloc[i][0],
+        #                    'delay2_off': events_learn_delay2_off.iloc[i][0],
+        #                    'stim_phase': 'learn',
+        #                    'category_id': cat_id_learn[i],
+        #                    'category_name': cat_name_learn[i],
+        #                    'external_image_file': stimuli_learn_path[i],
+        #                    'new_old_labels_recog': -1})
+
+        nwbfile.add_trial(start_time=events_learn_stim_on.iloc[i][0],
+                          stop_time=events_learn_delay2_off.iloc[i][0],
+                          stim_on=events_learn_stim_on.iloc[i][0],
+                          stim_off=events_learn_stim_off.iloc[i][0],
+                          delay1_off=events_learn_delay1_off.iloc[i][0],
+                          delay2_off=events_learn_delay2_off.iloc[i][0],
+                          stim_phase='learn',
+                          category_id=cat_id_learn[i],
+                          category_name=cat_name_learn[i],
+                          external_image_file=stimuli_learn_path[i],
+                          new_old_labels_recog='NA'
+                         )
 
     for i in range(range_recog):
-        nwbfile.create_epoch(start_time=events_recog_stim_on.iloc[i][0],
-                             stop_time=events_recog_stim_off.iloc[i][0],
-                             timeseries=[event_ts, experiment_ids],
-                             tags='stimulus_recog',
-                             description='recognition phase stimulus')
+        # nwbfile.create_epoch(start_time=events_recog_stim_on.iloc[i][0],
+        #                      stop_time=events_recog_stim_off.iloc[i][0],
+        #                      timeseries=[event_ts, experiment_ids],
+        #                      tags='stimulus_recog',
+        #                      description='recognition phase stimulus')
 
-        nwbfile.add_trial({'start': events_recog_stim_on.iloc[i][0],
-                           'end': events_recog_delay2_off.iloc[i][0],
-                           'stim_on': events_recog_stim_on.iloc[i][0],
-                           'stim_off': events_recog_stim_off.iloc[i][0],
-                           'delay1_off': events_recog_delay1_off.iloc[i][0],
-                           'delay2_off': events_recog_delay2_off.iloc[i][0],
-                           'stim_phase': 'recog',
-                           'category_id': cat_id_recog[i],
-                           'category_name': cat_name_recog[i],
-                           'external_image_file': stimuli_recog_path[i],
-                           'new_old_labels_recog': new_old_recog[i]})
+        nwbfile.add_trial(start_time=events_recog_stim_on.iloc[i][0],
+                          stop_time=events_recog_delay2_off.iloc[i][0],
+                          stim_on=events_recog_stim_on.iloc[i][0],
+                          stim_off=events_recog_stim_off.iloc[i][0],
+                          delay1_off=events_recog_delay1_off.iloc[i][0],
+                          delay2_off=events_recog_delay2_off.iloc[i][0],
+                          stim_phase='recog',
+                          category_id=cat_id_recog[i],
+                          category_name=cat_name_recog[i],
+                          external_image_file=stimuli_recog_path[i],
+                          new_old_labels_recog=new_old_recog[i])
 
     # Add the waveform clustering and the spike data.
     # Create necessary processing modules for different kinds of waveform data
-    clustering_processing_module = ProcessingModule('Spikes', 'NA', 'The spike data contained')
+    clustering_processing_module = ProcessingModule('Spikes', 'The spike data contained')
     clusterWaveform_learn_processing_module = ProcessingModule('MeanWaveforms_learn',
-                                                               'NA',
                                                                'The mean waveforms for the clustered raw signal for learning phase')
     clusterWaveform_recog_processing_module = ProcessingModule('MeanWaveforms_recog',
-                                                               'NA',
                                                                'The mean waveforms for the clustered raw signal for recognition phase')
     IsolDist_processing_module = ProcessingModule('IsoDist',
-                                                  'NA',
                                                   'The IsolDist')
     SNR_processing_module = ProcessingModule('SNR',
-                                             'NA',
                                              'SNR (signal-to-noise)')
     # Get the unique channel id that we will be iterate over
     channel_ids = np.unique([cell_id[0] for cell_id in cell_ids])
@@ -220,14 +232,13 @@ def no2nwb(NOData, session_use, subjects):
         spike_id = np.asarray([spike[0] for spike in spikes])
         spike_cluster_id = np.asarray([spike[1] for spike in spikes])
         spike_timestamps = np.asarray([spike[2]/1000000 for spike in spikes])
-        clustering = Clustering(source='NA', description='Spikes of the channel detected',
+        clustering = Clustering(description='Spikes of the channel detected',
                                 num=spike_id, peak_over_rms=np.asarray([0]), times=spike_timestamps,
                                 name='channel'+str(channel_id))
         clustering_processing_module.add_data_interface(clustering)
 
         for i in range(len(meanWaveform_learn[0][0][0][0])):
-            waveform_mean_learn = ClusterWaveforms(source='NA',
-                                                   clustering_interface=clustering,
+            waveform_mean_learn = ClusterWaveforms(clustering_interface=clustering,
                                                    waveform_filtering='NA',
                                                    waveform_sd=np.asarray([[0]]),
                                                    waveform_mean=np.asarray([meanWaveform_learn[0][0][1][i]]),
@@ -240,8 +251,7 @@ def no2nwb(NOData, session_use, subjects):
 
         # Adding mean waveform recognition into the processing module
         for i in range(len(meanWaveform_recog[0][0][0][0])):
-            waveform_mean_recog = ClusterWaveforms(source='NA',
-                                                   clustering_interface=clustering,
+            waveform_mean_recog = ClusterWaveforms(clustering_interface=clustering,
                                                    waveform_filtering='NA',
                                                    waveform_sd=np.asarray([[0]]),
                                                    waveform_mean=np.asarray([meanWaveform_recog[0][0][1][i]]),
@@ -257,8 +267,7 @@ def no2nwb(NOData, session_use, subjects):
         # they are extracted from the original signals.
         # print(IsolDist_SNR[0][0][0])
         for i in range(len(IsolDist_SNR[0][0][1][0])):
-            isoldist_data_interface = TimeSeries(source='NA',
-                                                 data=[IsolDist_SNR[0][0][1][0][i]],
+            isoldist_data_interface = TimeSeries(data=[IsolDist_SNR[0][0][1][0][i]],
                                                  unit='NA',
                                                  timestamps=[0],
                                                  name='IsolDist_' + str(IsolDist_SNR[0][0][0][0][i]))
@@ -268,8 +277,7 @@ def no2nwb(NOData, session_use, subjects):
                 print('Catch an error in adding IsolDist to the processing module:' + str(e))
                 continue
 
-            SNR_data_interface = TimeSeries(source='NA',
-                                            unit='NA',
+            SNR_data_interface = TimeSeries(unit='NA',
                                             description='The SNR data',
                                             data=[IsolDist_SNR[0][0][2][0][i]],
                                             timestamps=[0],
